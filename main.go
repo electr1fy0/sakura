@@ -197,6 +197,41 @@ func VerifySession(next http.HandlerFunc) http.HandlerFunc {
 	})
 }
 
+// RBAC: Role based access control
+func (h *Handler) Token(w http.ResponseWriter, r *http.Request) {
+	// grantType := r.URL.Query().Get("grant_type")
+	// code := r.URL.Query().Get("code")
+	// clientID := r.URL.Query().Get("client_id")
+	// clientSecret := r.URL.Query().Get("client_secret")
+
+	// TODO
+	// verifySecret()
+	// verifyCode()
+	// deleteCode()
+
+	token, err := generateAccessToken()
+	if err != nil {
+		http.Error(w, "failed to generate access token", http.StatusInternalServerError)
+		return
+	}
+
+	fmt.Fprintf(w, "%s", token)
+}
+
+func generateAccessToken() (string, error) {
+	claims := jwt.MapClaims{
+		"iss":   "sakura",
+		"sub":   "user_meow",
+		"aud":   "client-id",
+		"exp":   time.Now().Add(48 * time.Hour).Unix(),
+		"iat":   time.Now().Unix(),
+		"scope": "openid profile email projects: read",
+	}
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+
+	return token.SignedString(secret)
+}
+
 func (h *Handler) Protected(w http.ResponseWriter, r *http.Request) {
 	writeJson(w, "you are in my guy")
 }
@@ -209,11 +244,12 @@ func main() {
 	r.Post("/signin", h.Signin)
 	r.Get("/protected", VerifySession(h.Protected))
 	r.Get("/authorize", VerifySession(h.Authorize))
+	r.Get("/token", h.Token)
+
 	server := http.Server{
 		Handler: r,
 		Addr:    ":8080",
 	}
 
 	server.ListenAndServe()
-
 }
