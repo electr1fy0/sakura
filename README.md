@@ -9,6 +9,7 @@ go run .
 ```
 
 Server listens on `http://localhost:8080` by default.
+You can override with `PORT`, for example: `PORT=9090 go run .`.
 
 ## End-to-end usage
 
@@ -20,7 +21,7 @@ Use repeated `scopes` query params, for example:
 ```bash
 curl -i -X POST "http://localhost:8080/signup" \
   -H "Content-Type: application/json" \
-  -d '{"username":"human","password":"meow"}'
+  -d '{"username":"human","password":"meow","email":"human@example.com","full_name":"Human User","role":"member"}'
 ```
 
 2. Register client (save `clientID` and `clientSecret` from response JSON):
@@ -28,7 +29,7 @@ curl -i -X POST "http://localhost:8080/signup" \
 ```bash
 curl -i -X POST "http://localhost:8080/register-client" \
   -H "Content-Type: application/json" \
-  -d '{"name":"demo-app","redirect_uris":["http://localhost:3000/callback"],"scope":["sub","username","email"]}'
+  -d '{"name":"demo-app","redirect_uris":["http://localhost:3000/callback"],"scope":["sub","username","email","full_name","role"]}'
 ```
 
 3. Start authorize while not signed in (will redirect to signin):
@@ -75,4 +76,14 @@ curl -i "http://localhost:8080/token?client_id=<CLIENT_ID>&client_secret=<CLIENT
 ```bash
 curl -i "http://localhost:8080/resource" \
   -H "Authorization: Bearer <ACCESS_TOKEN>"
+```
+
+Response contains profile fields available under granted scopes, for example:
+
+```json
+{
+  "sub": "f6f2c84f-0f54-4f4f-b4a9-0b1af9e8f5a9",
+  "username": "human",
+  "email": "human@example.com"
+}
 ```
