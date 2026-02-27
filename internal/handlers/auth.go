@@ -7,6 +7,7 @@ import (
 	"net/url"
 	"sakura/internal/types"
 	"sakura/internal/utils"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -29,19 +30,36 @@ func (h *Handler) Signin(w http.ResponseWriter, r *http.Request) {
 	rq := r.URL.Query()
 	returnURL := rq.Get("return_to")
 	returnU, err := url.Parse(returnURL)
+	if err != nil || returnURL == "" {
+		http.Error(w, "invalid return_to", http.StatusBadRequest)
+		return
+	}
 	returnU.RawQuery = rq.Encode()
 
 	fmt.Println("return url after signing:", returnU)
 
 	var up UserPayload
-	json.NewDecoder(r.Body).Decode(&up)
+	if err := json.NewDecoder(r.Body).Decode(&up); err != nil {
+		http.Error(w, "invalid signin payload", http.StatusBadRequest)
+		return
+	}
+	if strings.TrimSpace(up.Username) == "" || strings.TrimSpace(up.Password) == "" {
+		http.Error(w, "username and password are required", http.StatusBadRequest)
+		return
+	}
 
 	var user types.User
+	found := false
 	for _, u := range users {
 		if u.Username == up.Username {
 			user = u
+			found = true
 			break
 		}
+	}
+	if !found {
+		http.Error(w, "invalid username or password", http.StatusUnauthorized)
+		return
 	}
 
 	err = bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(up.Password))
@@ -71,9 +89,20 @@ func (h *Handler) Signin(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) Signup(w http.ResponseWriter, r *http.Request) {
 	var up UserPayload
-	json.NewDecoder(r.Body).Decode(&up)
+	if err := json.NewDecoder(r.Body).Decode(&up); err != nil {
+		http.Error(w, "invalid signup payload", http.StatusBadRequest)
+		return
+	}
+	if strings.TrimSpace(up.Username) == "" || strings.TrimSpace(up.Password) == "" {
+		http.Error(w, "username and password are required", http.StatusBadRequest)
+		return
+	}
 
-	hash, _ := bcrypt.GenerateFromPassword([]byte(up.Password), 10)
+	hash, err := bcrypt.GenerateFromPassword([]byte(up.Password), 10)
+	if err != nil {
+		http.Error(w, "failed to hash password", http.StatusInternalServerError)
+		return
+	}
 
 	user := types.User{ID: uuid.New(), Username: up.Username, PasswordHash: string(hash)}
 	users[user.ID.String()] = user

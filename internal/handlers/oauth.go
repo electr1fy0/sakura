@@ -80,7 +80,11 @@ func (h *Handler) Authorize(w http.ResponseWriter, r *http.Request) {
 	}
 
 	rq.Set("return_to", "http://localhost:8080/authorize")
-	signinURL, _ := BuildSigninURL(&rq)
+	signinURL, err := BuildSigninURL(&rq)
+	if err != nil {
+		http.Error(w, "failed to build signin redirect", http.StatusInternalServerError)
+		return
+	}
 
 	cookie, err := r.Cookie("sakura-jwt")
 	if err != nil {
@@ -103,6 +107,10 @@ func (h *Handler) Authorize(w http.ResponseWriter, r *http.Request) {
 	}
 
 	reqID := utils.GenerateCode()
+	if reqID == "" {
+		http.Error(w, "failed to create auth request", http.StatusInternalServerError)
+		return
+	}
 	authRequests[reqID] = types.AuthRequest{
 		ID:          reqID,
 		UserID:      id,
@@ -193,6 +201,10 @@ func (h *Handler) AuthorizeApprove(w http.ResponseWriter, r *http.Request) {
 	}
 
 	code := utils.GenerateCode()
+	if code == "" {
+		http.Error(w, "failed to create auth code", http.StatusInternalServerError)
+		return
+	}
 	codes[code] = types.AuthCode{
 		UserID:   id,
 		ClientID: client.ClientID,

@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"sakura/internal/types"
 	"sakura/internal/utils"
+	"strings"
 
 	"github.com/google/uuid"
 )
@@ -20,7 +21,14 @@ type ClientPayLoad struct {
 
 func (h *Handler) RegisterClient(w http.ResponseWriter, r *http.Request) {
 	var cp ClientPayLoad
-	json.NewDecoder(r.Body).Decode(&cp)
+	if err := json.NewDecoder(r.Body).Decode(&cp); err != nil {
+		http.Error(w, "invalid client payload", http.StatusBadRequest)
+		return
+	}
+	if strings.TrimSpace(cp.Name) == "" || len(cp.RedirectURIs) == 0 {
+		http.Error(w, "name and redirect_uris are required", http.StatusBadRequest)
+		return
+	}
 
 	var client = types.OauthClient{
 		ClientID:     uuid.New(),
@@ -28,6 +36,10 @@ func (h *Handler) RegisterClient(w http.ResponseWriter, r *http.Request) {
 		ClientSecret: utils.GenerateCode(),
 		RedirectURIs: cp.RedirectURIs,
 		Scopes:       cp.Scope,
+	}
+	if client.ClientSecret == "" {
+		http.Error(w, "failed to generate client secret", http.StatusInternalServerError)
+		return
 	}
 
 	clients[client.ClientID.String()] = &client

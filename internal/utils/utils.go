@@ -18,7 +18,8 @@ import (
 var secret = []byte("super-secret-key")
 
 func WriteJson(w http.ResponseWriter, msg any) {
-	json.NewEncoder(w).Encode(msg)
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(msg)
 }
 
 func GenerateJWT(user types.User) (string, error) {
@@ -54,7 +55,9 @@ func VerifyJWT(signed string) (jwt.MapClaims, bool) {
 
 func GenerateCode() string {
 	buf := make([]byte, 32)
-	rand.Read(buf)
+	if _, err := rand.Read(buf); err != nil {
+		return ""
+	}
 
 	return base64.URLEncoding.EncodeToString(buf)
 }
