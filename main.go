@@ -6,23 +6,21 @@ import (
 	"net/http"
 	"os"
 	"sakura/internal/handlers"
-
-	"github.com/go-chi/chi/v5"
 )
 
 func main() {
-	r := chi.NewRouter()
+	r := http.NewServeMux()
 	h := handlers.Handler{}
 
-	r.Post("/signup", h.Signup)
-	r.Post("/signin", h.Signin)
-	r.Get("/protected", (h.Protected))
-	r.Get("/resource", h.Resource)
-	r.Get("/authorize", h.Authorize)
-	r.Post("/authorize/approve", h.AuthorizeApprove)
+	r.HandleFunc("POST /signup", h.Signup)
+	r.HandleFunc("POST /signin", h.Signin)
+	r.HandleFunc("GET /protected", h.Protected)
+	r.HandleFunc("GET /resource", h.Resource)
+	r.HandleFunc("GET /authorize", h.Authorize)
+	r.HandleFunc("POST /authorize/approve", h.AuthorizeApprove)
 
-	r.Get("/token", h.Token)
-	r.Post("/register-client", h.RegisterClient)
+	r.HandleFunc("GET /token", h.Token)
+	r.HandleFunc("POST /register-client", h.RegisterClient)
 
 	port := os.Getenv("PORT")
 	if port == "" {
