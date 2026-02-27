@@ -17,8 +17,6 @@ import (
 // ID -> User Resources
 var users = make(map[string]types.User)
 
-const baseURL = "http://localhost:8080"
-
 type Handler struct {
 }
 type UserPayload struct {
@@ -26,6 +24,8 @@ type UserPayload struct {
 	Password string `json:"password"`
 }
 
+// Signin sets the session cookie for the provider's (me) user
+// redirects back to return_to with original query params.
 func (h *Handler) Signin(w http.ResponseWriter, r *http.Request) {
 	rq := r.URL.Query()
 	returnURL := rq.Get("return_to")
@@ -75,7 +75,7 @@ func (h *Handler) Signin(w http.ResponseWriter, r *http.Request) {
 	}
 
 	cookie := &http.Cookie{
-		Name:     "sakura-jwt",
+		Name:     sessionCookieName,
 		HttpOnly: true,
 		Value:    signed,
 		Expires:  time.Now().Add(48 * time.Hour),
@@ -87,6 +87,7 @@ func (h *Handler) Signin(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("final return: ", finalReturnURI)
 }
 
+// Typical user signup to the provider (me).
 func (h *Handler) Signup(w http.ResponseWriter, r *http.Request) {
 	var up UserPayload
 	if err := json.NewDecoder(r.Body).Decode(&up); err != nil {

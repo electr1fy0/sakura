@@ -19,6 +19,7 @@ type User struct {
 	PasswordHash string
 }
 
+// Relates all actors together
 type AuthCode struct {
 	UserID    uuid.UUID
 	ClientID  uuid.UUID
@@ -26,6 +27,8 @@ type AuthCode struct {
 	ExpiresAt int64
 }
 
+// Only to maintain context between /authorize and /authorize/approve.
+// There might be better ways
 type AuthRequest struct {
 	ID          string
 	UserID      uuid.UUID

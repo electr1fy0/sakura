@@ -13,7 +13,7 @@ import (
 )
 
 var (
-	// code -> Stuff it binds together
+	// code -> authorization context
 	codes        = make(map[string]types.AuthCode)
 	authRequests = make(map[string]types.AuthRequest)
 )
@@ -38,7 +38,7 @@ func VerifyRedirect(c *types.OauthClient, uri string) bool {
 }
 
 func BuildSigninURL(rq *url.Values) (string, error) {
-	signinStr := baseURL + "/signin"
+	signinStr := serverBaseURL() + "/signin"
 	signinURL, err := url.Parse(signinStr)
 	if err != nil {
 		return "", err
@@ -48,8 +48,7 @@ func BuildSigninURL(rq *url.Values) (string, error) {
 	return signinURL.String(), nil
 }
 
-// Authorize validates request and user auth.
-// Consent UI should be shown from this step.
+// Authorize validates request and creates an auth request context.
 func (h *Handler) Authorize(w http.ResponseWriter, r *http.Request) {
 	rq := r.URL.Query()
 	clientID := rq.Get("client_id")
@@ -69,7 +68,6 @@ func (h *Handler) Authorize(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// Check client's allowed redirect urls
 	if !VerifyRedirect(client, redirectURI) {
 		http.Error(w, "redirect uri is not allowed", http.StatusUnauthorized)
 		return
@@ -79,14 +77,14 @@ func (h *Handler) Authorize(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	rq.Set("return_to", "http://localhost:8080/authorize")
+	rq.Set("return_to", serverBaseURL()+"/authorize")
 	signinURL, err := BuildSigninURL(&rq)
 	if err != nil {
 		http.Error(w, "failed to build signin redirect", http.StatusInternalServerError)
 		return
 	}
 
-	cookie, err := r.Cookie("sakura-jwt")
+	cookie, err := r.Cookie(sessionCookieName)
 	if err != nil {
 		http.Redirect(w, r, signinURL, http.StatusTemporaryRedirect)
 		return
@@ -127,6 +125,7 @@ func (h *Handler) Authorize(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// AuthorizeApprove finalizes user-selected scopes and issues the auth code.
 func (h *Handler) AuthorizeApprove(w http.ResponseWriter, r *http.Request) {
 	if err := r.ParseForm(); err != nil {
 		http.Error(w, "invalid form submission", http.StatusBadRequest)
@@ -175,7 +174,7 @@ func (h *Handler) AuthorizeApprove(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	cookie, err := r.Cookie("sakura-jwt")
+	cookie, err := r.Cookie(sessionCookieName)
 	if err != nil {
 		http.Error(w, "user not authenticated", http.StatusUnauthorized)
 		return
@@ -225,9 +224,8 @@ func (h *Handler) AuthorizeApprove(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, callbackURI.String(), http.StatusFound)
 }
 
-// RBAC: Role based access control
+// Token exchanges an auth code for an access token.
 func (h *Handler) Token(w http.ResponseWriter, r *http.Request) {
-	// grantType := r.URL.Query().Get("grant_type")
 	code := r.URL.Query().Get("code")
 	clientID := r.URL.Query().Get("client_id")
 	clientSecret := r.URL.Query().Get("client_secret")
@@ -264,5 +262,6 @@ func (h *Handler) Token(w http.ResponseWriter, r *http.Request) {
 	}
 	delete(codes, code)
 
+	// Client uses this token to access my resources
 	fmt.Fprintf(w, "%s", token)
 }

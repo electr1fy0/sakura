@@ -10,6 +10,7 @@ func (h *Handler) Protected(w http.ResponseWriter, r *http.Request) {
 	utils.WriteJson(w, "you are in my guy")
 }
 
+// Resource verifies the bearer token and returns token claims as JSON.
 func (h *Handler) Resource(w http.ResponseWriter, r *http.Request) {
 	authz := r.Header.Get("Authorization")
 	if !strings.HasPrefix(authz, "Bearer ") {

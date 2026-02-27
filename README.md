@@ -8,7 +8,7 @@ Small OAuth provider server in Go.
 go run .
 ```
 
-Server listens on `http://localhost:8080`.
+Server listens on `http://localhost:8080` by default.
 
 ## End-to-end usage
 
