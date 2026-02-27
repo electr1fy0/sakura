@@ -5,9 +5,11 @@ import (
 )
 
 type OauthClient struct {
-	ClientID     string
+	ClientID     uuid.UUID
+	Name         string
 	ClientSecret string
 	RedirectURIs []string
+	Scopes       []string
 }
 
 type User struct {
@@ -19,6 +21,5 @@ type User struct {
 type AuthCode struct {
 	UserID    uuid.UUID
 	ClientID  uuid.UUID
-	Scopes    []string
 	ExpiresAt int64
 }

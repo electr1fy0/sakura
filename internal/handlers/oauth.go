@@ -7,34 +7,82 @@ import (
 	"sakura/internal/types"
 	"sakura/internal/utils"
 	"slices"
+
+	"github.com/google/uuid"
 )
 
-func IsURIAllowed(c *types.OauthClient, uri string) bool {
+var (
+	// code -> Stuff it binds together
+	codes = make(map[string]types.AuthCode)
+)
+
+func VerifyRedirect(c *types.OauthClient, uri string) bool {
 	if slices.Contains(c.RedirectURIs, uri) {
 		return true
 	}
 	return false
 }
 
+func BuildSigninURL(rq *url.Values) (string, error) {
+	signinStr := baseURL + "/signin"
+	signinURL, err := url.Parse(signinStr)
+	if err != nil {
+		return "", err
+	}
+	signinURL.RawQuery = rq.Encode()
+	fmt.Println("signin url: ", signinURL.String())
+	return signinURL.String(), nil
+}
+
 // Authorize generates a code
 // and redirects to the callback URI
 func (h *Handler) Authorize(w http.ResponseWriter, r *http.Request) {
-	// clientID := r.URL.Query().Get("client_id")
-	redirectURI := r.URL.Query().Get("redirect_uri")
+	rq := r.URL.Query()
+	clientID := rq.Get("client_id")
+	redirectURI := rq.Get("redirect_uri")
 	// TODO: implement other types later
-	_ = r.URL.Query().Get("response_type")
+	_ = rq.Get("response_type")
 
-	// client, ok := clients[clientID]
-	// if !ok {
-	// 	http.Error(w, "client does not exist", http.StatusUnauthorized)
-	// 	return
-	// }
+	client, ok := clients[clientID]
+	if !ok {
+		http.Error(w, "client does not exist", http.StatusUnauthorized)
+		return
+	}
 
-	// if !isURIAllowed(client, redirectURI) {
-	// 	http.Error(w, "redirect uri is not allowed", http.StatusUnauthorized)
-	// 	return
-	// }
+	// Check client's allowed redirect urls
+	if !VerifyRedirect(client, redirectURI) {
+		http.Error(w, "redirect uri is not allowed", http.StatusUnauthorized)
+		return
+	}
+
+	rq.Set("return_to", "http://localhost:8080/authorize")
+	signinURL, _ := BuildSigninURL(&rq)
+
+	cookie, err := r.Cookie("sakura-jwt")
+	if err != nil {
+		http.Redirect(w, r, signinURL, http.StatusTemporaryRedirect)
+		return
+	}
+
+	token := cookie.Value
+	claims, ok := utils.VerifyJWT(token)
+	userID, idOk := claims["sub"].(string)
+	if !ok || !idOk {
+		http.Error(w, "failed to read user from token", http.StatusInternalServerError)
+		return
+	}
+
+	id, err := uuid.Parse(userID)
+	if err != nil {
+		http.Error(w, "failed to parse user's uuid", http.StatusInternalServerError)
+		return
+	}
+
 	code := utils.GenerateCode()
+	codes[code] = types.AuthCode{
+		UserID:   id,
+		ClientID: client.ClientID,
+	}
 
 	callbackURI, err := url.Parse(redirectURI)
 	if err != nil {
@@ -46,25 +94,11 @@ func (h *Handler) Authorize(w http.ResponseWriter, r *http.Request) {
 	callbackURI.RawQuery = q.Encode()
 
 	http.Redirect(w, r, callbackURI.String(), http.StatusFound)
-
 }
 
 func VerifySession(next http.HandlerFunc) http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		cookie, err := r.Cookie("sakura-jwt")
-		if err != nil {
-			http.Redirect(w, r, baseURL+"/signin", http.StatusTemporaryRedirect)
-			return
-		}
 
-		token := cookie.Value
-		claims, ok := utils.VerifyJWT(token)
-		if !ok {
-			http.Redirect(w, r, baseURL+"/signin", http.StatusTemporaryRedirect)
-			return
-		}
-		fmt.Println(claims["username"])
-		next.ServeHTTP(w, r)
 	})
 }
 

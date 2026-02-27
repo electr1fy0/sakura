@@ -12,6 +12,8 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 )
 
+// Using this for literally all JWTs
+// TODO: Use separate keys for client access and user access
 var secret = []byte("super-secret-key")
 
 func WriteJson(w http.ResponseWriter, msg any) {
@@ -49,16 +51,11 @@ func VerifyJWT(signed string) (jwt.MapClaims, bool) {
 	return claims, true
 }
 
-// base64 does chunking of each byte to 6 bits each
-// therefore we do 4/3 as byte count taken
 func GenerateCode() string {
 	buf := make([]byte, 32)
 	rand.Read(buf)
 
-	var encoded = make([]byte, 44)
-	base64.URLEncoding.Encode(encoded, buf)
-
-	return string(encoded)
+	return base64.URLEncoding.EncodeToString(buf)
 }
 
 func GenerateAccessToken() (string, error) {

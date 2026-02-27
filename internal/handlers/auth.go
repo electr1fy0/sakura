@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/url"
 	"sakura/internal/types"
 	"sakura/internal/utils"
 	"time"
@@ -12,19 +13,8 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-var (
-	// Using this for literally all JWTs
-	// TODO: Use separate keys for client access and user access
-
-	// ID -> Client Resources
-	clients = make(map[string]*types.OauthClient)
-
-	// ID -> User Resources
-	users = make(map[string]types.User)
-
-	// code -> Stuff it binds together
-	codes = make(map[string]types.AuthCode)
-)
+// ID -> User Resources
+var users = make(map[string]types.User)
 
 const baseURL = "http://localhost:8080"
 
@@ -36,18 +26,25 @@ type UserPayload struct {
 }
 
 func (h *Handler) Signin(w http.ResponseWriter, r *http.Request) {
+	rq := r.URL.Query()
+	returnURL := rq.Get("return_to")
+	returnU, err := url.Parse(returnURL)
+	returnU.RawQuery = rq.Encode()
+
+	fmt.Println("return url after signing:", returnU)
+
 	var up UserPayload
 	json.NewDecoder(r.Body).Decode(&up)
 
 	var user types.User
-
 	for _, u := range users {
 		if u.Username == up.Username {
 			user = u
 			break
 		}
 	}
-	err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(up.Password))
+
+	err = bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(up.Password))
 	if err != nil {
 		http.Error(w, "invalid password, mate", http.StatusUnauthorized)
 		return
@@ -65,8 +62,11 @@ func (h *Handler) Signin(w http.ResponseWriter, r *http.Request) {
 		Value:    signed,
 		Expires:  time.Now().Add(48 * time.Hour),
 	}
+
+	finalReturnURI := returnU.String()
 	http.SetCookie(w, cookie)
-	utils.WriteJson(w, "sent cookies to eat")
+	http.Redirect(w, r, finalReturnURI, http.StatusFound)
+	fmt.Println("final return: ", finalReturnURI)
 }
 
 func (h *Handler) Signup(w http.ResponseWriter, r *http.Request) {
@@ -78,6 +78,5 @@ func (h *Handler) Signup(w http.ResponseWriter, r *http.Request) {
 	user := types.User{ID: uuid.New(), Username: up.Username, PasswordHash: string(hash)}
 	users[user.ID.String()] = user
 
-	utils.WriteJson(w, "user added")
-	fmt.Println(users)
+	w.WriteHeader(http.StatusCreated)
 }

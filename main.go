@@ -15,9 +15,11 @@ func main() {
 
 	r.Post("/signup", h.Signup)
 	r.Post("/signin", h.Signin)
-	r.Get("/protected", handlers.VerifySession((h.Protected)))
-	r.Get("/authorize", handlers.VerifySession((h.Authorize)))
+	r.Get("/protected", (h.Protected))
+	r.Get("/authorize", h.Authorize)
+
 	r.Get("/token", h.Token)
+	r.Post("/register-client", h.RegisterClient)
 
 	server := http.Server{
 		Handler: r,
