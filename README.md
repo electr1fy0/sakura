@@ -1,4 +1,4 @@
-# Sakura OAuth Demo
+# Sakura
 
 Small OAuth provider server in Go.
 

@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"net/url"
 	"sakura/internal/types"
@@ -35,8 +34,6 @@ func (h *Handler) Signin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	returnU.RawQuery = rq.Encode()
-
-	fmt.Println("return url after signing:", returnU)
 
 	var up UserPayload
 	if err := json.NewDecoder(r.Body).Decode(&up); err != nil {
@@ -84,7 +81,6 @@ func (h *Handler) Signin(w http.ResponseWriter, r *http.Request) {
 	finalReturnURI := returnU.String()
 	http.SetCookie(w, cookie)
 	http.Redirect(w, r, finalReturnURI, http.StatusFound)
-	fmt.Println("final return: ", finalReturnURI)
 }
 
 // Typical user signup to the provider (me).

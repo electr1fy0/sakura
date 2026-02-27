@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"fmt"
 	"net/http"
 	"net/url"
 	"sakura/internal/types"
@@ -44,7 +43,6 @@ func BuildSigninURL(rq *url.Values) (string, error) {
 		return "", err
 	}
 	signinURL.RawQuery = rq.Encode()
-	fmt.Println("signin url: ", signinURL.String())
 	return signinURL.String(), nil
 }
 
