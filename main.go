@@ -16,7 +16,9 @@ func main() {
 	r.Post("/signup", h.Signup)
 	r.Post("/signin", h.Signin)
 	r.Get("/protected", (h.Protected))
+	r.Get("/resource", h.Resource)
 	r.Get("/authorize", h.Authorize)
+	r.Post("/authorize/approve", h.AuthorizeApprove)
 
 	r.Get("/token", h.Token)
 	r.Post("/register-client", h.RegisterClient)

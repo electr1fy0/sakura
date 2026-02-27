@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/http"
 	"sakura/internal/types"
+	"strings"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -58,14 +59,23 @@ func GenerateCode() string {
 	return base64.URLEncoding.EncodeToString(buf)
 }
 
-func GenerateAccessToken() (string, error) {
+func GenerateAccessToken(clientID string, scopes []string, user types.User) (string, error) {
 	claims := jwt.MapClaims{
 		"iss":   "sakura",
-		"sub":   "user_meow",
-		"aud":   "client-id",
+		"aud":   clientID,
 		"exp":   time.Now().Add(48 * time.Hour).Unix(),
 		"iat":   time.Now().Unix(),
-		"scope": "openid profile email projects:read",
+		"scope": strings.Join(scopes, " "),
+	}
+	for _, scope := range scopes {
+		switch scope {
+		case "sub":
+			claims["sub"] = user.ID.String()
+		case "username":
+			claims["username"] = user.Username
+		case "email":
+			claims["email"] = user.Email
+		}
 	}
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 
