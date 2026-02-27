@@ -68,17 +68,8 @@ func GenerateAccessToken(clientID string, scopes []string, user types.User) (str
 		"aud":   clientID,
 		"exp":   time.Now().Add(48 * time.Hour).Unix(),
 		"iat":   time.Now().Unix(),
+		"sub":   user.ID.String(),
 		"scope": strings.Join(scopes, " "),
-	}
-	for _, scope := range scopes {
-		switch scope {
-		case "sub":
-			claims["sub"] = user.ID.String()
-		case "username":
-			claims["username"] = user.Username
-		case "email":
-			claims["email"] = user.Email
-		}
 	}
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 

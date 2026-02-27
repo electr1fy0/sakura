@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"fmt"
 	"net/http"
 	"net/url"
 	"sakura/internal/types"
@@ -261,5 +262,7 @@ func (h *Handler) Token(w http.ResponseWriter, r *http.Request) {
 	delete(codes, code)
 
 	// Client uses this token to access my resources
+	// The browser never sees it, ideally of course
+	// but that's not really my concern.
 	fmt.Fprintf(w, "%s", token)
 }

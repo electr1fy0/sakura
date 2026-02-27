@@ -21,6 +21,9 @@ type Handler struct {
 type UserPayload struct {
 	Username string `json:"username"`
 	Password string `json:"password"`
+	Email    string `json:"email"`
+	FullName string `json:"full_name"`
+	Role     string `json:"role"`
 }
 
 // Signin sets the session cookie for the provider's (me) user
@@ -101,7 +104,18 @@ func (h *Handler) Signup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user := types.User{ID: uuid.New(), Username: up.Username, PasswordHash: string(hash)}
+	role := strings.TrimSpace(up.Role)
+	if role == "" {
+		role = "member"
+	}
+	user := types.User{
+		ID:           uuid.New(),
+		Username:     up.Username,
+		Email:        strings.TrimSpace(up.Email),
+		FullName:     strings.TrimSpace(up.FullName),
+		Role:         role,
+		PasswordHash: string(hash),
+	}
 	users[user.ID.String()] = user
 
 	w.WriteHeader(http.StatusCreated)

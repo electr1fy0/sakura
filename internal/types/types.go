@@ -16,6 +16,8 @@ type User struct {
 	ID           uuid.UUID
 	Username     string
 	Email        string
+	FullName     string
+	Role         string
 	PasswordHash string
 }
 
@@ -28,7 +30,7 @@ type AuthCode struct {
 }
 
 // Only to maintain context between /authorize and /authorize/approve.
-// There might be better ways
+// There might be better ways but eh.
 type AuthRequest struct {
 	ID          string
 	UserID      uuid.UUID
